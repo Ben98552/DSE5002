@@ -1,0 +1,55 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Aug 24 19:57:49 2023
+
+@author: ben98
+"""
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+cost_of_living = pd.read_csv('Python Project/cost_of_living.csv')
+ds_salaries = pd.read_csv('Python Project/ds_salaries.csv')
+fyi_salary_data=  pd.read_csv('Python Project/Levels_Fyi_Salary_Data.csv')
+country_codes = pd.read_excel('Python Project/country_codes.xlsx')
+
+ds_salaries.groupby('job_title')['salary_in_usd'].agg([np.mean]) #used to find the average salary of a Data Scientist, $108187.83
+
+ds_salaries.rename(columns = {'company_location': 'country_codes'}, inplace = True) 
+country_codes.rename(columns = {'Alpha-2 code': 'country_codes'}, inplace = True) #rename columns to have them merged together
+
+salaries_and_codes = pd.merge(ds_salaries, country_codes, how= 'left', on= 'country_codes') #merging of dataframes
+
+salary_averages = salaries_and_codes.groupby('Country')['salary_in_usd'].mean() #to create a dataframe of average salary per country for a data scientist
+
+salary_averages_data = salary_averages.to_frame() #turn the Series into a Dataframe
+
+salary_averages_data = pd.merge(salary_averages_data, country_codes, how= 'left', on= 'Country') #merging country_codes and salary_averages_data dataframes
+
+cost_of_living[['city', 'Country']] = cost_of_living['City'].str.rsplit(',', n=1, expand=True) #split City column into two comlumns, city and Country
+
+
+cost_of_living_average = salary_averages_data.Country.str.split()
+salary_averages_data['Country_new'] = cost_of_living_average.str[:2].str.join(' ')
+index = cost_of_living.Country.str.split()
+cost_of_living['Country_new'] = index.str[:2].str.join(' ')
+
+country_salary_data = pd.merge(salary_averages_data, cost_of_living, how= 'left', on= 'Country_new')
+
+country_salary_data["effective_salary"] = country_salary_data['salary_in_usd'] / country_salary_data['Cost of Living Index']
+
+country_salary_data.sort_values('effective_salary', ascending=False)
+
+country_salary_data = country_salary_data[country_salary_data['effective_salary'].notna()]
+
+top_5_places = country_salary_data[:5] #select the top 5 places
+
+top_5_places = top_5_places.drop(['Country_x','salary_in_usd','country_codes','Alpha-3 code','Numeric','Country_new', 'Rank', 'Cost of Living Plus Rent Index'], axis=1)
+
+plt.bar(top_5_places['City'], top_5_places['Rent Index'], color='r')
+plt.bar(top_5_places['City'], top_5_places['Groceries Index'], bottom=top_5_places['Rent Index'], color='b')
+
+top_5_places.plot(x='City', kind='bar',stacked=True,
+                  title= 'Cost of Living')

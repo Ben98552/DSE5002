@@ -1,0 +1,86 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Aug 26 00:08:01 2023
+
+@author: ben98
+"""
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from itertools import chain
+
+#Question 1
+
+net_titles = pd.read_csv('Week_8/Data/Netflix/titles.csv')
+net_credits = pd.read_csv('Week_8/Data/Netflix/credits.csv')
+
+genre_list = net_titles['genres'].tolist()
+genre_list = str(genre_list)
+genre_list = genre_list.replace('[', "")
+genre_list = genre_list.replace(']', "")
+genre_list = genre_list.replace("'", "")
+genre_list = genre_list.replace('"', "")
+genre_list = genre_list.replace(' ', "")
+genre_list = genre_list.split(',') #I know this should be a loop but I couldn't wrap my head around it
+
+unique_genre = []
+list_of_unique_genres = set(genre_list)
+for genre in list_of_unique_genres:
+    unique_genre.append(genre)
+
+unique_genre.remove('')
+list(chain(unique_genre))
+
+
+#Question 2
+movies_by_year = net_titles[net_titles.type == 'MOVIE']
+movies_by_year = movies_by_year.groupby(by = 'release_year').mean()
+movie_highest_score = movies_by_year.sort_values('imdb_score', ascending=False)
+movie_highest_score = movie_highest_score.drop(['runtime', 'seasons','imdb_votes', 'tmdb_popularity', 'tmdb_score'], axis=1)
+
+#Question 3
+
+both_net = pd.merge(net_titles, net_credits, how= 'left', on = 'id')
+count_net = both_net['title'].value_counts()
+count_net.loc[count_net['title'] == 208, 'Index'].iloc[0]
+
+#Question 4
+
+de_nero_scores = both_net.loc[both_net['name'] == 'Robert De Niro']
+print(de_nero_scores['imdb_score'].max())
+de_nero_scores.query("imdb_score== 8.3")['release_year']
+sns.kdeplot(x = 'imdb_score', data= de_nero_scores)
+
+#Question 5
+
+movie = 'war'
+for i in range(len(net_titles['description'])):
+    string= net_titles['description'][i]
+    string_lower = string.lower().replace(' ', '')
+if movie in string_lower:
+    net_titles.at[i, 'war_movie'] = 'True'
+else:
+    net_titles.at[i,'war_movie'] = 'False'
+
+movie = 'gangster'
+for i in range(len(net_titles['description'])):
+    string= net_titles['description'][i]
+    string_lower = string.lower().replace(' ', '')
+    if movie in string_lower:
+        net_titles.at[i, 'gangster_movie'] = 'True'
+    else:
+        net_titles.at[i,'gangster_movie'] = 'False'
+        
+net_titles['war_movie'].value_counts()
+net_titles['gangster_movie'].value_counts()
+
+net_titles.groupby('war_movie')['imdb_score'].agg(np.mean)
+net_titles.groupby('gangster_movie')['imdb_score'].agg(np.mean)
+
+sns.set(style="darkgrid")
+df = sns.load_dataset('iris')
+fig = sns.kdeplot(net_titles.groupby('war_movie')['imdb_score'].agg(np.mean),shade=True, color="r", label = 'war')
+fig = sns.kdeplot(net_titles.groupby('gangster_movie')['imdb_score'].agg(np.mean), shade=True, color="b", label = 'gangster')
+
